@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0B1426">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Sail Fit">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="manifest" href="manifest.json">
+<title>Sailing Fitness Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Serif+Display&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  
+  :root {
+    --bg-deep: #0B1426;
+    --bg-card: #0F2040;
+    --bg-card-hover: #132848;
+    --bg-bar: #1E3A5F;
+    --blue-accent: #38BDF8;
+    --blue-glow: rgba(56,189,248,0.15);
+    --green: #10B981;
+    --green-soft: rgba(16,185,129,0.08);
+    --green-border: rgba(16,185,129,0.25);
+    --green-text: #86EFAC;
+    --text-primary: #F1F5F9;
+    --text-secondary: #E2E8F0;
+    --text-muted: #94A3B8;
+    --text-dim: #64748B;
+    --text-detail: #7B93AD;
+    --red: #EF4444;
+    --yellow: #F59E0B;
+    --font-body: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-display: 'DM Serif Display', Georgia, serif;
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  html { background: var(--bg-deep); }
+  
+  body {
+    font-family: var(--font-body);
+    background: var(--bg-deep);
+    color: var(--text-secondary);
+    min-height: 100vh;
+    min-height: 100dvh;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .texture {
+    position: fixed; inset: 0; opacity: 0.03; pointer-events: none; z-index: 0;
+    background: repeating-linear-gradient(135deg, transparent, transparent 40px, rgba(56,189,248,0.4) 40px, rgba(56,189,248,0.4) 41px);
+  }
+
+  .container {
+    position: relative; z-index: 1;
+    max-width: 520px; margin: 0 auto;
+    padding: calc(var(--safe-top) + 8px) 16px calc(var(--safe-bottom) + 100px);
+  }
+
+  /* Header */
+  .header { padding: 20px 0 16px; text-align: center; }
+  .header-label { font-size: 13px; letter-spacing: 3px; text-transform: uppercase; color: var(--blue-accent); font-weight: 600; margin-bottom: 4px; }
+  .header-title { font-family: var(--font-display); font-size: 26px; color: var(--text-primary); line-height: 1.2; }
+  .header-sub { font-size: 12px; color: var(--text-dim); margin-top: 3px; }
+
+  /* Overall progress */
+  .overall {
+    background: linear-gradient(135deg, #0F2847, #162F5A);
+    border-radius: 16px; padding: 16px 18px; margin-bottom: 18px;
+    border: 1px solid var(--blue-glow);
+  }
+  .overall-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .overall-label { font-size: 12px; font-weight: 600; color: var(--text-muted); letter-spacing: 1px; text-transform: uppercase; }
+  .overall-pct { font-size: 22px; font-weight: 700; color: var(--blue-accent); font-family: var(--font-display); }
+  .bar { height: 8px; background: var(--bg-bar); border-radius: 4px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 4px; transition: width 0.5s ease; }
+  .bar-fill.blue { background: linear-gradient(90deg, #0EA5E9, #38BDF8); }
+  .overall-sub { font-size: 11px; color: var(--text-dim); margin-top: 5px; }
+
+  /* Scrollable selectors */
+  .scroll-row {
+    display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; margin-bottom: 14px;
+    -webkit-overflow-scrolling: touch; scrollbar-width: none;
+  }
+  .scroll-row::-webkit-scrollbar { display: none; }
+
+  /* Week buttons */
+  .week-btn {
+    flex: 0 0 auto; padding: 8px 12px; border-radius: 12px; border: 2px solid transparent;
+    background: var(--bg-card); cursor: pointer; min-width: 52px; position: relative;
+    transition: all 0.2s; text-align: center; -webkit-tap-highlight-color: transparent;
+  }
+  .week-btn.active { border-color: var(--phase-color); background: color-mix(in srgb, var(--phase-color) 8%, transparent); }
+  .week-btn-label { font-size: 9px; font-weight: 600; letter-spacing: 0.5px; margin-bottom: 1px; transition: color 0.2s; }
+  .week-btn.active .week-btn-label { color: var(--phase-color); }
+  .week-btn:not(.active) .week-btn-label { color: var(--text-dim); }
+  .week-btn-num { font-size: 17px; font-weight: 700; transition: color 0.2s; }
+  .week-btn.active .week-btn-num { color: var(--text-primary); }
+  .week-btn:not(.active) .week-btn-num { color: var(--text-muted); }
+  .week-check {
+    position: absolute; top: -3px; right: -3px; width: 15px; height: 15px; border-radius: 50%;
+    background: var(--green); display: flex; align-items: center; justify-content: center;
+    font-size: 9px; color: #fff; line-height: 1;
+  }
+  .week-bar { margin-top: 4px; height: 3px; border-radius: 2px; background: var(--bg-bar); overflow: hidden; }
+  .week-bar-fill { height: 100%; border-radius: 2px; background: var(--phase-color); }
+
+  /* Phase banner */
+  .phase-banner {
+    border-radius: 12px; padding: 11px 14px; margin-bottom: 14px;
+    display: flex; align-items: center; gap: 11px;
+    background: color-mix(in srgb, var(--phase-color) 6%, transparent);
+    border: 1px solid color-mix(in srgb, var(--phase-color) 18%, transparent);
+  }
+  .phase-icon { font-size: 26px; }
+  .phase-name { font-size: 13px; font-weight: 700; color: var(--phase-color); }
+  .phase-desc { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
+
+  /* Day tabs */
+  .day-btn {
+    flex: 0 0 auto; padding: 7px 13px; border-radius: 10px;
+    background: transparent; border: 1px solid transparent;
+    cursor: pointer; text-align: center; transition: all 0.2s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .day-btn.active { background: var(--bg-bar); border-color: rgba(56,189,248,0.3); }
+  .day-btn-label { font-size: 11px; font-weight: 600; white-space: nowrap; transition: color 0.2s; }
+  .day-btn.active .day-btn-label { color: var(--blue-accent); }
+  .day-btn:not(.active) .day-btn-label { color: var(--text-dim); }
+  .day-dot { width: 6px; height: 6px; border-radius: 50%; margin: 4px auto 0; }
+
+  /* Day header */
+  .day-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+  .day-title { font-size: 16px; font-weight: 700; color: var(--text-primary); line-height: 1.3; }
+  .day-sub { font-size: 11px; color: var(--text-dim); margin-top: 2px; }
+  .mark-all-btn {
+    padding: 5px 13px; border-radius: 8px; font-size: 11px; font-weight: 600;
+    cursor: pointer; transition: all 0.2s; border: 1px solid rgba(148,163,184,0.2);
+    background: var(--bg-bar); color: var(--text-muted);
+    -webkit-tap-highlight-color: transparent;
+  }
+  .mark-all-btn.done { background: var(--green); color: #fff; border-color: var(--green); }
+
+  .day-bar { height: 4px; background: var(--bg-bar); border-radius: 2px; overflow: hidden; margin-bottom: 14px; }
+  .day-bar-fill { height: 100%; border-radius: 2px; transition: width 0.4s ease; }
+
+  /* Exercise items */
+  .exercises { display: flex; flex-direction: column; gap: 7px; }
+  .exercise {
+    display: flex; gap: 12px; align-items: flex-start; padding: 13px 14px; border-radius: 12px;
+    background: var(--bg-card); border: 1px solid rgba(30,58,95,0.6);
+    cursor: pointer; transition: all 0.2s; -webkit-tap-highlight-color: transparent;
+    -webkit-user-select: none; user-select: none;
+  }
+  .exercise.checked { background: var(--green-soft); border-color: var(--green-border); }
+  .exercise:active { transform: scale(0.985); }
+
+  .checkbox {
+    width: 23px; height: 23px; border-radius: 7px; flex-shrink: 0; margin-top: 1px;
+    background: transparent; border: 2px solid #3B5276;
+    display: flex; align-items: center; justify-content: center; transition: all 0.2s;
+  }
+  .exercise.checked .checkbox { background: var(--green); border-color: var(--green); }
+
+  .ex-name { font-size: 13.5px; font-weight: 600; color: var(--text-secondary); transition: all 0.2s; }
+  .exercise.checked .ex-name { color: var(--green-text); text-decoration: line-through; text-decoration-color: rgba(134,239,172,0.3); }
+  .ex-detail { font-size: 11.5px; color: var(--text-detail); margin-top: 2px; line-height: 1.4; transition: color 0.2s; }
+  .exercise.checked .ex-detail { color: #4B7A5E; }
+
+  /* Stretch section */
+  .stretch-toggle {
+    width: 100%; margin-top: 18px; padding: 13px 14px; border-radius: 12px;
+    background: var(--bg-card); border: 1px solid rgba(56,189,248,0.2);
+    cursor: pointer; display: flex; justify-content: space-between; align-items: center;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .stretch-toggle-left { display: flex; align-items: center; gap: 9px; }
+  .stretch-toggle-label { font-size: 13px; font-weight: 600; color: var(--blue-accent); }
+  .stretch-arrow { color: var(--text-dim); font-size: 16px; transition: transform 0.2s; }
+  .stretch-arrow.open { transform: rotate(180deg); }
+
+  .stretch-list { margin-top: 7px; display: flex; flex-direction: column; gap: 5px; }
+  .stretch-item { padding: 11px 14px; border-radius: 10px; background: var(--bg-card); border: 1px solid rgba(30,58,95,0.5); }
+  .stretch-name { font-size: 12.5px; font-weight: 600; color: #CBD5E1; }
+  .stretch-detail { font-size: 11.5px; color: var(--text-detail); margin-top: 2px; }
+
+  /* Notes section */
+  .notes-section { margin-top: 20px; }
+  .notes-toggle {
+    width: 100%; padding: 13px 14px; border-radius: 12px;
+    background: var(--bg-card); border: 1px solid rgba(245,158,11,0.2);
+    cursor: pointer; display: flex; justify-content: space-between; align-items: center;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .notes-label { font-size: 13px; font-weight: 600; color: var(--yellow); }
+  .notes-textarea {
+    width: 100%; margin-top: 7px; padding: 12px 14px; border-radius: 10px;
+    background: var(--bg-card); border: 1px solid rgba(245,158,11,0.15);
+    color: var(--text-secondary); font-family: var(--font-body); font-size: 13px;
+    line-height: 1.5; resize: vertical; min-height: 80px; outline: none;
+  }
+  .notes-textarea::placeholder { color: var(--text-dim); }
+  .notes-textarea:focus { border-color: rgba(245,158,11,0.4); }
+
+  /* Reset */
+  .reset-area { margin-top: 30px; text-align: center; }
+  .reset-btn {
+    padding: 7px 18px; border-radius: 8px; background: transparent;
+    border: 1px solid rgba(239,68,68,0.3); color: var(--red);
+    font-size: 11px; font-weight: 600; cursor: pointer; opacity: 0.5; transition: opacity 0.2s;
+    font-family: var(--font-body);
+  }
+  .reset-btn:active { opacity: 1; }
+
+  /* Toast */
+  .toast {
+    position: fixed; bottom: calc(var(--safe-bottom) + 16px); left: 50%; transform: translateX(-50%);
+    padding: 7px 14px; border-radius: 8px; background: var(--bg-bar); color: var(--blue-accent);
+    font-size: 11px; font-weight: 600; border: 1px solid rgba(56,189,248,0.3); z-index: 10;
+    opacity: 0; transition: opacity 0.3s; pointer-events: none;
+  }
+  .toast.show { opacity: 1; }
+
+  .hidden { display: none !important; }
+
+  @media (hover: hover) {
+    .exercise:hover { background: var(--bg-card-hover); }
+    .exercise.checked:hover { background: rgba(16,185,129,0.12); }
+    .reset-btn:hover { opacity: 1; }
+  }
+</style>
+</head>
+<body>
+
+<div class="texture"></div>
+
+<div class="container">
+  <div class="header">
+    <div class="header-label">10-Week Sailing Prep</div>
+    <h1 class="header-title">Fitness Tracker</h1>
+    <div class="header-sub">Milwaukee, WI — Course starts May 18</div>
+  </div>
+
+  <div class="overall">
+    <div class="overall-top">
+      <span class="overall-label">Overall Progress</span>
+      <span class="overall-pct" id="overallPct">0%</span>
+    </div>
+    <div class="bar"><div class="bar-fill blue" id="overallBar" style="width:0%"></div></div>
+    <div class="overall-sub" id="overallSub">0 / 0 exercises completed</div>
+  </div>
+
+  <div class="scroll-row" id="weekRow"></div>
+  <div id="phaseBanner"></div>
+  <div class="scroll-row" id="dayRow"></div>
+
+  <div class="day-header">
+    <div>
+      <div class="day-title" id="dayTitle"></div>
+      <div class="day-sub" id="daySub"></div>
+    </div>
+    <button class="mark-all-btn" id="markAllBtn" onclick="toggleMarkAll()">Mark All</button>
+  </div>
+  <div class="day-bar"><div class="day-bar-fill" id="dayBar" style="width:0%"></div></div>
+
+  <div class="exercises" id="exerciseList"></div>
+
+  <button class="stretch-toggle" onclick="toggleStretches()">
+    <div class="stretch-toggle-left">
+      <span style="font-size:18px">🧘</span>
+      <span class="stretch-toggle-label">Flexibility & Mobility Routine</span>
+    </div>
+    <span class="stretch-arrow" id="stretchArrow">▾</span>
+  </button>
+  <div class="stretch-list hidden" id="stretchList"></div>
+
+  <div class="notes-section">
+    <button class="notes-toggle" onclick="toggleNotes()">
+      <div class="stretch-toggle-left">
+        <span style="font-size:18px">📝</span>
+        <span class="notes-label">Workout Notes</span>
+      </div>
+      <span class="stretch-arrow" id="notesArrow">▾</span>
+    </button>
+    <div class="hidden" id="notesArea">
+      <textarea class="notes-textarea" id="notesInput" placeholder="Jot down weights used, how you felt, what to adjust next week..." oninput="saveNotes()"></textarea>
+    </div>
+  </div>
+
+  <div class="reset-area">
+    <button class="reset-btn" onclick="resetAll()">Reset All Progress</button>
+  </div>
+</div>
+
+<div class="toast" id="toast">Saved ✓</div>
+
+<script>
+// ═══════════════════════════════════════════
+// WORKOUT PLAN DATA
+// ═══════════════════════════════════════════
+const PLAN=[{week:1,phase:"Foundation",pn:1,pc:"#3B82F6",days:[{name:"Day A — Upper Body + Core",dow:"Mon",ex:[{n:"Bent-over dumbbell rows",d:"3×12 — Hinge at hips, pull to ribcage. Mimics pulling sheets."},{n:"Lat pulldowns",d:"3×12 — Wide grip, pull to upper chest."},{n:"Push-ups",d:"3×10–15 — Counterbalances pulling work."},{n:"Forearm plank",d:"3×30 sec — Elbows under shoulders, body rigid."},{n:"Side plank",d:"3×20 sec/side — Oblique strength for tacking/jibing."},{n:"Dead hangs",d:"2×20–30 sec — Grip a pull-up bar and hang."},{n:"Wrist curls (flex + ext)",d:"2×15 each direction — Light dumbbells."}]},{name:"Day B — Lower Body + Hiking Sim",dow:"Tue",ex:[{n:"Goblet squats",d:"3×12 — Hold dumbbell at chest, squat deep."},{n:"Walking lunges",d:"3×10/leg — Single-leg balance."},{n:"Leg extensions (machine)",d:"3×15 — Isolates quads, the dominant hiking muscle."},{n:"Swiss ball hamstring curls",d:"3×12 — Heels on ball, lift hips, curl."},{n:"Wall sit",d:"3×45–60 sec — Simplest hiking simulation."},{n:"Glute bridges",d:"3×15 — Drive hips up, protects lower back."},{n:"Cat-cow stretches",d:"2×10 — Alternate arching and rounding back."}]},{name:"Day C — Cardio + Flexibility",dow:"Thu",ex:[{n:"Rowing machine (steady-state)",d:"20–25 min at 60–70% max HR."},{n:"Full stretching routine",d:"15–20 min — All 8 stretches, 30–60 sec each."}]},{name:"Day D — Full Body + Balance",dow:"Fri/Sat",ex:[{n:"DB Romanian deadlifts",d:"3×12 — Hinge at hips, weight slides down shins."},{n:"Seated cable row",d:"3×12 — Sit upright, pull handle to navel."},{n:"Kettlebell swings",d:"3×12 — Explosive hip hinge."},{n:"Russian twists",d:"3×15/side — Seated, rotate weight side to side."},{n:"BOSU ball squats",d:"3×10 — Stand on dome, bodyweight squats."},{n:"Single-leg stands",d:"3×30 sec/leg — Progress to eyes closed."},{n:"Farmer's carry",d:"3×40 meters — Heavy dumbbells at sides."}]}]},{week:2,phase:"Foundation",pn:1,pc:"#3B82F6",days:[{name:"Day A — Upper Body + Core",dow:"Mon",ex:[{n:"Bent-over dumbbell rows",d:"3×14 — +5% weight from Week 1."},{n:"Lat pulldowns",d:"3×14 — +5% weight."},{n:"Push-ups",d:"3×12–17"},{n:"Forearm plank",d:"3×35 sec"},{n:"Side plank",d:"3×25 sec/side"},{n:"Dead hangs",d:"2×25–35 sec"},{n:"Wrist curls (flex + ext)",d:"2×17 each direction"}]},{name:"Day B — Lower Body + Hiking Sim",dow:"Tue",ex:[{n:"Goblet squats",d:"3×14 — +5% weight."},{n:"Walking lunges",d:"3×12/leg"},{n:"Leg extensions (machine)",d:"3×17"},{n:"Swiss ball hamstring curls",d:"3×14"},{n:"Wall sit",d:"3×60–75 sec"},{n:"Glute bridges",d:"3×17"},{n:"Cat-cow stretches",d:"2×10"}]},{name:"Day C — Cardio + Flexibility",dow:"Thu",ex:[{n:"Rowing machine (steady-state)",d:"25 min at 60–70% max HR."},{n:"Full stretching routine",d:"15–20 min — All 8 stretches."}]},{name:"Day D — Full Body + Balance",dow:"Fri/Sat",ex:[{n:"DB Romanian deadlifts",d:"3×14 — +5% weight."},{n:"Seated cable row",d:"3×14"},{n:"Kettlebell swings",d:"3×14"},{n:"Russian twists",d:"3×17/side"},{n:"BOSU ball squats",d:"3×12"},{n:"Single-leg stands",d:"3×35 sec/leg"},{n:"Farmer's carry",d:"3×40m — Increase weight."}]}]},{week:3,phase:"Foundation",pn:1,pc:"#3B82F6",days:[{name:"Day A — Upper Body + Core",dow:"Mon",ex:[{n:"Bent-over dumbbell rows",d:"3×15 — +5% weight from Wk 2."},{n:"Lat pulldowns",d:"3×15"},{n:"Push-ups",d:"3×15–20"},{n:"Forearm plank",d:"3×45 sec"},{n:"Side plank",d:"3×30 sec/side"},{n:"Dead hangs",d:"2×30–40 sec"},{n:"Wrist curls (flex + ext)",d:"2×18 each direction"}]},{name:"Day B — Lower Body + Hiking Sim",dow:"Tue",ex:[{n:"Goblet squats",d:"3×15 — +5% weight."},{n:"Walking lunges",d:"3×12/leg — Add light dumbbells."},{n:"Leg extensions (machine)",d:"3×18"},{n:"Swiss ball hamstring curls",d:"3×15"},{n:"Wall sit",d:"3×75–90 sec"},{n:"Glute bridges",d:"3×18"},{n:"Cat-cow stretches",d:"2×10"}]},{name:"Day C — Cardio + Flexibility",dow:"Thu",ex:[{n:"Rowing machine",d:"30 min steady + 3×(1 min hard / 1 min easy)."},{n:"Full stretching routine",d:"15–20 min — All 8 stretches."}]},{name:"Day D — Full Body + Balance",dow:"Fri/Sat",ex:[{n:"DB Romanian deadlifts",d:"3×15 — +5% weight."},{n:"Seated cable row",d:"3×15"},{n:"Kettlebell swings",d:"3×15"},{n:"Russian twists",d:"3×18/side"},{n:"BOSU ball squats",d:"3×12"},{n:"Single-leg stands",d:"3×40 sec/leg — Eyes closed."},{n:"Farmer's carry",d:"3×45m — Heavy."}]}]},{week:4,phase:"Strength",pn:2,pc:"#F59E0B",days:[{name:"Day A — Upper Body Strength",dow:"Mon",ex:[{n:"Pull-ups or assisted",d:"4×6–8 — The king of sailing exercises."},{n:"Barbell bent-over rows",d:"4×8–10 — Heavier than Phase 1."},{n:"Single-arm DB row",d:"3×8/arm — Asymmetric sheeting sim."},{n:"DB shoulder press",d:"3×8 — Overhead strength for sails."},{n:"Push-ups (feet elevated)",d:"3×12–15"},{n:"Face pulls (cable)",d:"3×12 — Rotator cuff health."},{n:"Forearm plank",d:"3×45–60 sec"}]},{name:"Day B — Lower Body + Hiking",dow:"Tue",ex:[{n:"Barbell back squats",d:"4×8 — Primary quad/glute builder."},{n:"Bulgarian split squats",d:"3×8/leg — Rear foot on bench."},{n:"Leg ext. isometric holds",d:"3×30 sec — Hold at top. Mimics hiking."},{n:"Leg curls (machine)",d:"3×10"},{n:"Wall sit with weight",d:"3×60–90 sec — Hold plate to chest."},{n:"Back extensions",d:"3×12 — Strengthens lower back."},{n:"Hanging leg raises",d:"3×10 — Hip flexor strength."}]},{name:"Day C — Cardio Intervals + Grip",dow:"Wed",ex:[{n:"Rowing intervals",d:"6×1 min hard / 1 min easy."},{n:"Steady-state cycling/running",d:"15–20 min moderate."},{n:"Towel pull-ups",d:"3×max reps — Drape towel over bar."},{n:"Plate pinch holds",d:"3×20–30 sec — Pinch two plates."},{n:"Grip squeezes",d:"2×15/hand — 3–5 sec holds each."}]},{name:"Day D — Upper Endurance + Core",dow:"Thu",ex:[{n:"Seated cable row (high rep)",d:"4×15 — Moderate weight, endurance."},{n:"DB upright rows",d:"3×12 — Pull to collarbone."},{n:"Inverted rows",d:"3×10 — Under barbell in rack."},{n:"Side plank w/ rotation",d:"3×10/side — Thread arm under body."},{n:"Pallof press (cable)",d:"3×10/side — Anti-rotation core."},{n:"Swiss ball rollouts",d:"3×10 — Kneel, roll forward."},{n:"Dead hangs",d:"3×30–40 sec"}]},{name:"Day E — Lower Power + Cardio",dow:"Fri",ex:[{n:"Front squats",d:"3×8 — Bar on front of shoulders."},{n:"Kettlebell swings",d:"4×15 — Explosive."},{n:"Lateral lunges",d:"3×8/side — Mimics lateral shifting."},{n:"Single-leg Romanian DL",d:"3×8/leg — Balance + posterior chain."},{n:"Running or cycling",d:"25–30 min at 70–75% max HR."}]}]},{week:5,phase:"Strength",pn:2,pc:"#F59E0B",days:[{name:"Day A — Upper Body Strength",dow:"Mon",ex:[{n:"Pull-ups or assisted",d:"4×7–9 — +5% weight if weighted."},{n:"Barbell bent-over rows",d:"4×8–10 — +5% weight."},{n:"Single-arm DB row",d:"3×9/arm"},{n:"DB shoulder press",d:"3×9"},{n:"Push-ups (feet elevated)",d:"3×15–18"},{n:"Face pulls (cable)",d:"3×13"},{n:"Forearm plank",d:"3×60 sec"}]},{name:"Day B — Lower Body + Hiking",dow:"Tue",ex:[{n:"Barbell back squats",d:"4×8 — +5% weight."},{n:"Bulgarian split squats",d:"3×9/leg"},{n:"Leg ext. isometric holds",d:"3×35 sec"},{n:"Leg curls (machine)",d:"3×11"},{n:"Wall sit with weight",d:"3×75–90 sec — More plate weight."},{n:"Back extensions",d:"3×13"},{n:"Hanging leg raises",d:"3×11"}]},{name:"Day C — Cardio Intervals + Grip",dow:"Wed",ex:[{n:"Rowing intervals",d:"8×1 min hard / 1 min easy."},{n:"Steady-state cycling/running",d:"15–20 min."},{n:"Towel pull-ups",d:"3×max reps"},{n:"Plate pinch holds",d:"3×25–35 sec"},{n:"Grip squeezes",d:"2×17/hand"}]},{name:"Day D — Upper Endurance + Core",dow:"Thu",ex:[{n:"Seated cable row (high rep)",d:"4×16"},{n:"DB upright rows",d:"3×13"},{n:"Inverted rows",d:"3×11"},{n:"Side plank w/ rotation",d:"3×11/side"},{n:"Pallof press (cable)",d:"3×11/side"},{n:"Swiss ball rollouts",d:"3×11"},{n:"Dead hangs",d:"3×35–45 sec"}]},{name:"Day E — Lower Power + Cardio",dow:"Fri",ex:[{n:"Front squats",d:"3×8 — +5% weight."},{n:"Kettlebell swings",d:"4×16"},{n:"Lateral lunges",d:"3×9/side"},{n:"Single-leg Romanian DL",d:"3×9/leg"},{n:"Running or cycling",d:"25–30 min at 70–75% max HR."}]}]},{week:6,phase:"Strength",pn:2,pc:"#F59E0B",days:[{name:"Day A — Upper Body Strength",dow:"Mon",ex:[{n:"Pull-ups",d:"4×8 — Goal: unassisted. +5%."},{n:"Barbell bent-over rows",d:"4×10 — +5% weight."},{n:"Single-arm DB row",d:"3×10/arm"},{n:"DB shoulder press",d:"3×10"},{n:"Push-ups (feet elevated)",d:"3×18–20"},{n:"Face pulls (cable)",d:"3×14"},{n:"Forearm plank",d:"3×60–75 sec"}]},{name:"Day B — Lower Body + Hiking",dow:"Tue",ex:[{n:"Barbell back squats",d:"4×8 — +5%. Peak Phase 2 load."},{n:"Bulgarian split squats",d:"3×10/leg"},{n:"Leg ext. isometric holds",d:"3×40 sec"},{n:"Leg curls (machine)",d:"3×12"},{n:"Wall sit with weight",d:"3×90–120 sec"},{n:"Back extensions",d:"3×14"},{n:"Hanging leg raises",d:"3×12"}]},{name:"Day C — Cardio Intervals + Grip",dow:"Wed",ex:[{n:"Rowing intervals",d:"8×1.5 min hard / 1 min easy."},{n:"Steady-state cycling/running",d:"15–20 min."},{n:"Towel pull-ups",d:"3×max reps"},{n:"Plate pinch holds",d:"3×30–40 sec"},{n:"Grip squeezes",d:"2×18/hand"}]},{name:"Day D — Upper Endurance + Core",dow:"Thu",ex:[{n:"Seated cable row (high rep)",d:"4×17"},{n:"DB upright rows",d:"3×14"},{n:"Inverted rows",d:"3×12"},{n:"Side plank w/ rotation",d:"3×12/side"},{n:"Pallof press (cable)",d:"3×12/side"},{n:"Swiss ball rollouts",d:"3×12"},{n:"Dead hangs",d:"3×40–50 sec"}]},{name:"Day E — Lower Power + Cardio",dow:"Fri",ex:[{n:"Front squats",d:"3×8 — +5% weight."},{n:"Kettlebell swings",d:"4×18"},{n:"Lateral lunges",d:"3×10/side"},{n:"Single-leg Romanian DL",d:"3×10/leg"},{n:"Running or cycling",d:"30 min at 70–75% max HR."}]}]},{week:7,phase:"Sport-Specific",pn:3,pc:"#EF4444",days:[{name:"Day A — Sailing Power Circuit",dow:"Mon",ex:[{n:"Circuit: Pull-ups (explosive)",d:"4 rounds — 5–6 reps per round."},{n:"Circuit: Kettlebell swings",d:"4 rounds — 12 reps."},{n:"Circuit: Med ball rotational slam",d:"4 rounds — 8/side."},{n:"Circuit: Wall sit",d:"4 rounds — 60–90 sec."},{n:"Circuit: Burpees",d:"4 rounds — 6 reps. 90s rest between rounds."},{n:"Farmer's carry",d:"3×60 meters — Heavy."},{n:"Towel chin-ups",d:"3×max reps."}]},{name:"Day B — Hiking Endurance",dow:"Tue",ex:[{n:"Barbell front squats",d:"4×6 — Heavy."},{n:"Leg ext. isometric pyramid",d:"5-4-3-2-1 min holds (break as needed)."},{n:"Weighted wall sit",d:"4×90–120 sec — 10–25 lb plate."},{n:"Swiss ball leg extensions",d:"3×20 — Sit on ball, straighten legs."},{n:"Hanging leg raises",d:"3×12"},{n:"Back extensions",d:"3×15"}]},{name:"Day C — Cardio + Flexibility",dow:"Wed",ex:[{n:"Rowing intervals",d:"10×1 min max effort / 1 min easy."},{n:"Extended stretching",d:"20 min — All 8 stretches, 60 sec each."}]},{name:"Day D — Upper Endurance + Pulling",dow:"Thu",ex:[{n:"Single-arm cable row (standing)",d:"4×12/arm — Core challenge."},{n:"Pull-up negatives (5-sec)",d:"4×5 — Slow descent."},{n:"Face pulls",d:"3×15"},{n:"DB shoulder press (alternating)",d:"3×8/arm"},{n:"Pallof press holds",d:"3×20 sec/side"},{n:"Side plank",d:"3×40–45 sec/side"},{n:"Forearm plank",d:"3×60–90 sec"},{n:"Wrist roller or curls",d:"3×10–12"}]},{name:"Day E — Full-Body Sailing Sim",dow:"Fri",ex:[{n:"Circuit: Rowing 3 min",d:"Moderate pace to start."},{n:"Circuit: Wall sit 90 sec",d:"Continuous flow."},{n:"Circuit: Cable rows 12/arm",d:"No rest between exercises."},{n:"Circuit: BOSU squats 12",d:"Transition immediately."},{n:"Circuit: Russian twists 20",d:"Keep moving."},{n:"Circuit: Dead hangs 40 sec",d:"Then lateral lunges 8/side."},{n:"Circuit: Rowing 2 min hard",d:"Repeat 2–3×. Finish: 15 min cycle + stretch."}]}]},{week:8,phase:"Sport-Specific",pn:3,pc:"#EF4444",days:[{name:"Day A — Sailing Power Circuit",dow:"Mon",ex:[{n:"Circuit: Pull-ups (explosive)",d:"5 rounds — 6 reps."},{n:"Circuit: Kettlebell swings",d:"5 rounds — 14 reps."},{n:"Circuit: Med ball rotational slam",d:"5 rounds — 10/side."},{n:"Circuit: Wall sit",d:"5 rounds — 75–90 sec."},{n:"Circuit: Burpees",d:"5 rounds — 7 reps."},{n:"Farmer's carry",d:"3×60m — Increase weight."},{n:"Towel chin-ups",d:"3×max reps."}]},{name:"Day B — Hiking Endurance",dow:"Tue",ex:[{n:"Barbell front squats",d:"4×6 — +5% weight."},{n:"Leg ext. isometric pyramid",d:"5-4-3-2-1 min — Fewer breaks."},{n:"Weighted wall sit",d:"4×105–120 sec — +5 lbs."},{n:"Swiss ball leg extensions",d:"3×22"},{n:"Hanging leg raises",d:"3×13"},{n:"Back extensions",d:"3×16"}]},{name:"Day C — Cardio + Flexibility",dow:"Wed",ex:[{n:"Rowing intervals",d:"10×1 min max effort / 1 min easy."},{n:"Extended stretching",d:"20 min — All 8 stretches."}]},{name:"Day D — Upper Endurance + Pulling",dow:"Thu",ex:[{n:"Single-arm cable row (standing)",d:"4×13/arm"},{n:"Pull-up negatives (5-sec)",d:"4×6"},{n:"Face pulls",d:"3×16"},{n:"DB shoulder press (alternating)",d:"3×9/arm"},{n:"Pallof press holds",d:"3×25 sec/side"},{n:"Side plank",d:"3×45–50 sec/side"},{n:"Forearm plank",d:"3×75–90 sec"},{n:"Wrist roller or curls",d:"3×12"}]},{name:"Day E — Full-Body Sailing Sim",dow:"Fri",ex:[{n:"Circuit: Rowing 3 min",d:"Moderate pace."},{n:"Circuit: Wall sit 90 sec",d:"Continuous."},{n:"Circuit: Cable rows 13/arm",d:"No rest."},{n:"Circuit: BOSU squats 14",d:"Push it."},{n:"Circuit: Russian twists 22",d:"Keep moving."},{n:"Circuit: Dead hangs 50 sec",d:"Target 60s. Lateral lunges 9/side."},{n:"Circuit: Rowing 2 min hard",d:"Repeat 3×. Finish w/ stretch."}]}]},{week:9,phase:"Sport-Specific",pn:3,pc:"#EF4444",days:[{name:"Day A — Sailing Power Circuit ★",dow:"Mon",ex:[{n:"Circuit: Pull-ups (explosive)",d:"5 rounds — 7 reps. Peak week!"},{n:"Circuit: Kettlebell swings",d:"5 rounds — 15 reps."},{n:"Circuit: Med ball rotational slam",d:"5 rounds — 10/side."},{n:"Circuit: Wall sit",d:"5 rounds — 90 sec+."},{n:"Circuit: Burpees",d:"5 rounds — 8 reps."},{n:"Farmer's carry",d:"3×60m — Heaviest yet."},{n:"Towel chin-ups",d:"3×max reps — PR attempt."}]},{name:"Day B — Hiking Endurance ★",dow:"Tue",ex:[{n:"Barbell front squats",d:"4×6 — Heaviest of program."},{n:"Leg ext. isometric pyramid",d:"Target: continuous 5-min hold to start!"},{n:"Weighted wall sit",d:"4×2+ min — Push through."},{n:"Swiss ball leg extensions",d:"3×25"},{n:"Hanging leg raises",d:"3×15"},{n:"Back extensions",d:"3×18"}]},{name:"Day C — Cardio + Flexibility",dow:"Wed",ex:[{n:"Rowing intervals",d:"10×1 min max — Max wattage!"},{n:"Extended stretching",d:"20 min — All 8 stretches."}]},{name:"Day D — Upper Endurance + Pulling ★",dow:"Thu",ex:[{n:"Single-arm cable row (standing)",d:"4×14/arm"},{n:"Pull-up negatives (5-sec)",d:"4×7"},{n:"Face pulls",d:"3×17"},{n:"DB shoulder press (alternating)",d:"3×10/arm"},{n:"Pallof press holds",d:"3×30 sec/side"},{n:"Side plank",d:"3×50–60 sec/side"},{n:"Forearm plank",d:"3×90 sec"},{n:"Wrist roller or curls",d:"3×14"}]},{name:"Day E — Full-Body Sailing Sim ★",dow:"Fri",ex:[{n:"Circuit: Rowing 3 min",d:"Push pace higher."},{n:"Circuit: Wall sit 2 min",d:"Peak endurance."},{n:"Circuit: Cable rows 14/arm",d:"No rest."},{n:"Circuit: BOSU squats 15",d:"Peak volume."},{n:"Circuit: Russian twists 25",d:"Keep moving."},{n:"Circuit: Dead hangs 60 sec",d:"Goal! Lateral lunges 10/side."},{n:"Circuit: Rowing 3 min hard",d:"Repeat 3×. Full stretch after."}]}]},{week:10,phase:"Taper",pn:4,pc:"#10B981",days:[{name:"Day 1 — Upper Body (Reduced)",dow:"Mon",ex:[{n:"Pull-ups",d:"2×6–8 — Same weight, half the sets."},{n:"Barbell rows",d:"2×8 — Maintain intensity, cut volume."},{n:"Face pulls",d:"2×12"},{n:"Forearm plank",d:"2×60 sec"},{n:"Dead hangs",d:"2×40 sec"}]},{name:"Day 2 — Lower Body (Reduced)",dow:"Tue",ex:[{n:"Front squats",d:"2×6 — Same weight, half sets."},{n:"Leg ext. isometric hold",d:"2×60 sec"},{n:"Wall sit",d:"2×60 sec — No added weight."},{n:"Back extensions",d:"2×12"},{n:"Glute bridges",d:"2×12"}]},{name:"Day 3 — Light Cardio + Mobility",dow:"Wed",ex:[{n:"Easy rowing",d:"15 min — Conversational pace."},{n:"Full stretching routine",d:"20 min — All 8 stretches, 60 sec each."},{n:"Foam rolling",d:"10 min — Quads, back, shoulders, forearms."}]},{name:"Day 4 — Full Body (Light)",dow:"Thu",ex:[{n:"Pull-ups",d:"1–2×6 — Easy effort."},{n:"Squats (bodyweight)",d:"1–2×12"},{n:"Seated cable row",d:"1–2×10 — Light weight."},{n:"Plank",d:"2×45 sec"},{n:"Rowing sprints",d:"3×30 sec — Stay sharp."}]},{name:"Day 5 — Mobility Only",dow:"Fri",ex:[{n:"Full stretching routine",d:"20–30 min — Deep, slow stretches."},{n:"Foam rolling",d:"10–15 min — Full body."},{n:"Light yoga or walking",d:"15–20 min — Stay loose."}]}]}];
+
+const PHASES={1:{name:"Foundation",desc:"Build movement quality, aerobic base, muscle endurance",icon:"⚓"},2:{name:"Strength",desc:"Increase raw strength in key muscle groups",icon:"💪"},3:{name:"Sport-Specific",desc:"Peak sailing-specific fitness with functional exercises",icon:"⛵"},4:{name:"Taper",desc:"Shed fatigue while maintaining fitness gains",icon:"🏁"}};
+
+const STRETCHES=[
+  {n:"Kneeling hip flexor stretch",d:"30–60 sec/side — Push hips forward gently."},
+  {n:"Seated hamstring stretch",d:"30–60 sec/leg — Reach toward toes."},
+  {n:"Doorway chest & shoulder stretch",d:"30–60 sec — Forearms on frame, lean through."},
+  {n:"Thread-the-needle thoracic rotation",d:"30–60 sec/side — Reach under, then open."},
+  {n:"Cat-cow",d:"10 reps — Alternate arching and rounding."},
+  {n:"Wrist flexion & extension stretches",d:"15 sec each direction, each hand."},
+  {n:"Figure-four glute stretch",d:"30–60 sec/side — Ankle over opposite knee."},
+  {n:"Overhead lat stretch",d:"30–60 sec/side — Grab bar, lean away."}
+];
+
+// ═══════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════
+const STORAGE_KEY = 'sailing-fitness-progress';
+const NOTES_KEY = 'sailing-fitness-notes';
+
+let progress = {};
+let activeWeek = 0;
+let activeDay = 0;
+let stretchesOpen = false;
+let notesOpen = false;
+let toastTimer = null;
+
+function load() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) progress = JSON.parse(raw);
+  } catch(e) {}
+  // Restore last viewed week/day
+  try {
+    const pos = localStorage.getItem('sailing-fitness-pos');
+    if (pos) { const p = JSON.parse(pos); activeWeek = p.w || 0; activeDay = p.d || 0; }
+  } catch(e) {}
+}
+
+function save() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
+    localStorage.setItem('sailing-fitness-pos', JSON.stringify({w: activeWeek, d: activeDay}));
+  } catch(e) {}
+  showToast();
+}
+
+function showToast() {
+  const t = document.getElementById('toast');
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 1200);
+}
+
+// ═══════════════════════════════════════════
+// CALCULATIONS
+// ═══════════════════════════════════════════
+function dayProgress(wi, di) {
+  const exs = PLAN[wi].days[di].ex;
+  let done = 0;
+  exs.forEach((_, ei) => { if (progress[`${wi}-${di}-${ei}`]) done++; });
+  return { done, total: exs.length, pct: Math.round((done / exs.length) * 100) };
+}
+
+function weekProgress(wi) {
+  let done = 0, total = 0;
+  PLAN[wi].days.forEach((day, di) => {
+    day.ex.forEach((_, ei) => { total++; if (progress[`${wi}-${di}-${ei}`]) done++; });
+  });
+  return { done, total, pct: total ? Math.round((done / total) * 100) : 0 };
+}
+
+function overallProgress() {
+  let done = 0, total = 0;
+  PLAN.forEach((w, wi) => {
+    w.days.forEach((d, di) => {
+      d.ex.forEach((_, ei) => { total++; if (progress[`${wi}-${di}-${ei}`]) done++; });
+    });
+  });
+  return { done, total, pct: total ? Math.round((done / total) * 100) : 0 };
+}
+
+// ═══════════════════════════════════════════
+// RENDER
+// ═══════════════════════════════════════════
+function render() {
+  const ov = overallProgress();
+  document.getElementById('overallPct').textContent = ov.pct + '%';
+  document.getElementById('overallBar').style.width = ov.pct + '%';
+  document.getElementById('overallSub').textContent = `${ov.done} / ${ov.total} exercises completed`;
+
+  // Week row
+  const wr = document.getElementById('weekRow');
+  wr.innerHTML = '';
+  PLAN.forEach((w, wi) => {
+    const wp = weekProgress(wi);
+    const btn = document.createElement('button');
+    btn.className = 'week-btn' + (wi === activeWeek ? ' active' : '');
+    btn.style.setProperty('--phase-color', w.pc);
+    btn.onclick = () => { activeWeek = wi; activeDay = 0; render(); save(); };
+    let html = `<div class="week-btn-label">WK</div><div class="week-btn-num">${w.week}</div>`;
+    if (wp.pct === 100) html += `<div class="week-check">✓</div>`;
+    else if (wp.pct > 0) html += `<div class="week-bar"><div class="week-bar-fill" style="width:${wp.pct}%"></div></div>`;
+    btn.innerHTML = html;
+    wr.appendChild(btn);
+  });
+  // Scroll active into view
+  const activeBtn = wr.querySelector('.week-btn.active');
+  if (activeBtn) activeBtn.scrollIntoView({ inline: 'center', behavior: 'smooth', block: 'nearest' });
+
+  const cw = PLAN[activeWeek];
+  const ph = PHASES[cw.pn];
+
+  // Phase banner
+  document.getElementById('phaseBanner').innerHTML = `
+    <div class="phase-banner" style="--phase-color:${cw.pc}">
+      <span class="phase-icon">${ph.icon}</span>
+      <div><div class="phase-name">Phase ${cw.pn}: ${ph.name}</div><div class="phase-desc">${ph.desc}</div></div>
+    </div>`;
+
+  // Day tabs
+  const dr = document.getElementById('dayRow');
+  dr.innerHTML = '';
+  cw.days.forEach((d, di) => {
+    const dp = dayProgress(activeWeek, di);
+    const btn = document.createElement('button');
+    btn.className = 'day-btn' + (di === activeDay ? ' active' : '');
+    btn.onclick = () => { activeDay = di; render(); save(); };
+    let dot = '';
+    if (dp.pct === 100) dot = `<div class="day-dot" style="background:var(--green)"></div>`;
+    else if (dp.pct > 0) dot = `<div class="day-dot" style="background:${cw.pc}"></div>`;
+    btn.innerHTML = `<div class="day-btn-label">${d.dow}</div>${dot}`;
+    dr.appendChild(btn);
+  });
+
+  const cd = cw.days[activeDay];
+  const dp = dayProgress(activeWeek, activeDay);
+
+  document.getElementById('dayTitle').textContent = cd.name;
+  document.getElementById('daySub').textContent = `${dp.done}/${dp.total} exercises • ${dp.pct}%`;
+
+  const mab = document.getElementById('markAllBtn');
+  if (dp.pct === 100) { mab.className = 'mark-all-btn done'; mab.textContent = '✓ Done'; }
+  else { mab.className = 'mark-all-btn'; mab.textContent = 'Mark All'; }
+
+  const db = document.getElementById('dayBar');
+  db.style.width = dp.pct + '%';
+  db.style.background = dp.pct === 100 ? 'var(--green)' : cw.pc;
+
+  // Exercises
+  const el = document.getElementById('exerciseList');
+  el.innerHTML = '';
+  cd.ex.forEach((ex, ei) => {
+    const key = `${activeWeek}-${activeDay}-${ei}`;
+    const checked = !!progress[key];
+    const div = document.createElement('div');
+    div.className = 'exercise' + (checked ? ' checked' : '');
+    div.onclick = () => { progress[key] = !progress[key]; save(); render(); };
+    div.innerHTML = `
+      <div class="checkbox">${checked ? '<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3 7.5L5.5 10L11 4" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>' : ''}</div>
+      <div style="flex:1;min-width:0">
+        <div class="ex-name">${ex.n}</div>
+        <div class="ex-detail">${ex.d}</div>
+      </div>`;
+    el.appendChild(div);
+  });
+
+  // Notes
+  const weekKey = `${NOTES_KEY}-w${activeWeek}`;
+  const notesInput = document.getElementById('notesInput');
+  try { notesInput.value = localStorage.getItem(weekKey) || ''; } catch(e) {}
+}
+
+// ═══════════════════════════════════════════
+// ACTIONS
+// ═══════════════════════════════════════════
+function toggleMarkAll() {
+  const cw = PLAN[activeWeek];
+  const cd = cw.days[activeDay];
+  const dp = dayProgress(activeWeek, activeDay);
+  const allDone = dp.pct === 100;
+  cd.ex.forEach((_, ei) => { progress[`${activeWeek}-${activeDay}-${ei}`] = !allDone; });
+  save(); render();
+}
+
+function toggleStretches() {
+  stretchesOpen = !stretchesOpen;
+  const sl = document.getElementById('stretchList');
+  const sa = document.getElementById('stretchArrow');
+  if (stretchesOpen) {
+    sl.classList.remove('hidden');
+    sa.classList.add('open');
+    if (!sl.hasChildNodes()) {
+      STRETCHES.forEach(s => {
+        const d = document.createElement('div');
+        d.className = 'stretch-item';
+        d.innerHTML = `<div class="stretch-name">${s.n}</div><div class="stretch-detail">${s.d}</div>`;
+        sl.appendChild(d);
+      });
+    }
+  } else {
+    sl.classList.add('hidden');
+    sa.classList.remove('open');
+  }
+}
+
+function toggleNotes() {
+  notesOpen = !notesOpen;
+  const na = document.getElementById('notesArea');
+  const narr = document.getElementById('notesArrow');
+  na.classList.toggle('hidden', !notesOpen);
+  narr.classList.toggle('open', notesOpen);
+  if (notesOpen) document.getElementById('notesInput').focus();
+}
+
+function saveNotes() {
+  const weekKey = `${NOTES_KEY}-w${activeWeek}`;
+  try { localStorage.setItem(weekKey, document.getElementById('notesInput').value); } catch(e) {}
+}
+
+function resetAll() {
+  if (confirm('Reset all progress? This cannot be undone.')) {
+    progress = {};
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem('sailing-fitness-pos');
+      for (let i = 0; i < 10; i++) localStorage.removeItem(`${NOTES_KEY}-w${i}`);
+    } catch(e) {}
+    activeWeek = 0; activeDay = 0;
+    render();
+  }
+}
+
+// ═══════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════
+load();
+render();
+
+// Register service worker
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js').catch(() => {});
+}
+</script>
+</body>
+</html>
